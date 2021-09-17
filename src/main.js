@@ -22,10 +22,19 @@ import '@ionic/vue/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
+import { addIcons } from 'ionicons';
+import { help, star } from 'ionicons/icons';
+
+addIcons({
+  'help': help,
+  'star': star,
+});
 
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
+
+
   
 router.isReady().then(() => {
   app.mount('#app');
