@@ -3,35 +3,33 @@
   <!-- この2つのヘッダーはあとで調べる-->
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>QUIZ</ion-title>
+        <ion-title>QUIZ めくった回数{{ revealCount }}</ion-title>
         <!--<p>TODO: TIMER</p> -->
       </ion-toolbar>
     </ion-header>
-    
     <ion-content :fullscreen="true" class="vertical-center">
       <ion-header collapse="condense">
         <ion-toolbar>
           <ion-title size="large">QUIZ</ion-title>
         </ion-toolbar>
       </ion-header>
-    
-<ion-grid>
-  <ion-row>
-    <ion-col>
-        <p>
-        <span v-for="(char, index) in masked" :key="char.id" v-on:click="revealByIndex(index)">
-            <span v-if="char == ''" v-bind:id="'pos' + index">？</span>
-            <span v-if="char != ''" v-bind:id="'pos' + index">{{char}}</span>
-        </span>
-        </p>
-    </ion-col>
-  </ion-row>
-  <ion-row>
-    <ion-col>
-        <aiueo v-on:revealByChar="revealByChar"/>
-    </ion-col>
-  </ion-row>
-</ion-grid>
+      <ion-grid>
+        <ion-row>
+          <ion-col>
+          <p>
+            <span v-for="(char, index) in masked" :key="char.id" v-on:click="revealByIndex(index)">
+              <span v-if="char == ''" v-bind:id="'pos' + index">？</span>
+              <span v-if="char != ''" v-bind:id="'pos' + index">{{char}}</span>
+            </span>
+          </p>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col>
+            <aiueo v-on:revealByChar="revealByChar"/>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-content>
   </ion-page>
 </template>
@@ -48,6 +46,8 @@ import {
     IonToolbar } from '@ionic/vue';
 import { defineComponent } from 'vue';
 import aiueo from './aiueo';
+const axios = require('axios').default;
+
 
 export default defineComponent({
   name: 'Home',
@@ -66,8 +66,9 @@ export default defineComponent({
       return {
           text: "",
           answer:"",
-          masked: "",
+          masked: "読込中...",
           alphabets: "",
+          revealCount: 0, // めくった回数
       }
   },
   computed: {
@@ -89,12 +90,21 @@ export default defineComponent({
       }
   },
   ionViewDidEnter() {
-      const text = "にほんでいちばんたかいやまはどこでしょう"
-      this.generateQuestion(text)
+      this.fetchQuestions().then( (questions) => {
+        // storeに入れて描画
+        this.generateQuestion(questions[0].question)
+        console.log(this.$store);
+      });
   },
   setup() {
   },
   methods: {
+      async fetchQuestions() {
+          const url = "https://script.google.com/macros/s/AKfycbwJG0SGHC8vZARry8LMOwVDoQ_rmYCFNLO9UmnG8yFu5NkPa2A5JpeGsAhNsF2NfWkGrQ/exec";
+          const res = await axios.get(url).then( v => v.data);
+          console.log(res);
+          return res;
+      },
       generateQuestion(text) {
         this.masked = this.mask(text);
         this.answer = this.splitAnswer(text);
@@ -107,7 +117,17 @@ export default defineComponent({
       splitAnswer(text) {
           return text.split("")
       },
+      addRevealCount() {
+          if (this.revealCount === undefined) {
+              this.revealCount = 0;
+          }
+          this.revealCount++;
+      },
+      setRevealCount(cnt) {
+          this.revealCount = cnt;
+      },
       revealByIndex(index) {
+          this.addRevealCount();
           // 選択した文字をオープンしてマスクを外す
           this.masked[index] = this.answer[index];
           // その他の場所で同じ文字があったらマスクを外す
@@ -119,6 +139,7 @@ export default defineComponent({
           console.log(result);
       },
       revealByChar(char) {
+          this.addRevealCount();
           const result = this.getAllIndexes(this.answer, char).map((index) => {
               this.masked[index] = this.answer[index];
               return true
