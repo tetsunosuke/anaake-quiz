@@ -234,3 +234,9 @@ http://ionicframework.com/docs/theming/ */
     --ion-card-background: #1e1e1e;
   }
 }
+
+table { font-size: 40px;  border: 1px solid #cccccc; width:100%}
+td { border-collapse: collapse; border: 1px solid #cccccc; text-align:center}
+.aiueo { align:center }
+span{ font-size: 30px}
+p.question {padding: 5px; border: 1px solid #ffaaaa}

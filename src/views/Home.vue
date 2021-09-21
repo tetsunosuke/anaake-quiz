@@ -3,43 +3,66 @@
   <!-- この2つのヘッダーはあとで調べる-->
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>QUIZ めくった回数{{ revealCount }}</ion-title>
+        <ion-title>QUIZ めくった回数{{ revealCount }} <span v-if="hasNext" @click="next">next</span>
+</ion-title>
         <!--<p>TODO: TIMER</p> -->
       </ion-toolbar>
     </ion-header>
-    <ion-content :fullscreen="true" class="vertical-center">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">QUIZ</ion-title>
-        </ion-toolbar>
-      </ion-header>
-      <ion-grid>
-        <ion-row>
-          <ion-col>
-          <p>
+  <ion-grid>
+    <ion-row class="ion-align-items-center">
+      <ion-col>
+        <input id="inputAnswer" class="message"/>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-align-items-center">
+      <ion-col>
+          <p class="question">問題：
             <span v-for="(char, index) in masked" :key="char.id" v-on:click="revealByIndex(index)">
               <span v-if="char == ''" v-bind:id="'pos' + index">？</span>
               <span v-if="char != ''" v-bind:id="'pos' + index">{{char}}</span>
             </span>
           </p>
-          </ion-col>
-        </ion-row>
-        <ion-row>
-          <ion-col>
-            <aiueo v-on:revealByChar="revealByChar"/>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
-    </ion-content>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-align-items-center">
+      <ion-col>
+        <aiueo v-on:revealByChar="revealByChar"/>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-align-items-center">
+      <ion-col>
+        <p class="message">{{message}}</p>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-align-items-center">
+      <ion-col>
+        <ul>
+          <li>ルール</li>
+          <ul>
+          <li>「？」の部分か50音表の文字をクリックすると、問題文の？の中で同じ文字がオープンします</li>
+          <li>問題文を予想して答えを出すまでにめくった回数を競います</li>
+          </ul>
+          <li>まだ作ってない</li>
+          <ul>
+          <li>トータルで回答した回数</li>
+          <li>タイマー</li>
+          <li>答えの入力欄</li>
+          </ul>
+        </ul>
+      </ion-col>
+    </ion-row>
+
+  </ion-grid>
   </ion-page>
 </template>
+
 
 <script>
 import {
     IonGrid,
     IonRow,
     IonCol,
-    IonContent,
+//    IonContent,
     IonHeader,
     IonPage,
     IonTitle,
@@ -55,7 +78,7 @@ export default defineComponent({
     IonGrid,
     IonCol,
     IonRow,
-    IonContent,
+    // IonContent,
     IonHeader,
     IonPage,
     IonTitle,
@@ -66,12 +89,25 @@ export default defineComponent({
       return {
           text: "",
           answer:"",
-          masked: "読込中...",
+          masked: "ただいま問題を読み込んでいます......",
           alphabets: "",
           revealCount: 0, // めくった回数
+          message:"",
       }
   },
   computed: {
+      hasNext: {
+          get: function() {
+              const state = this.$store.state;
+              if (state.json === undefined) {
+                  return false;
+              }
+              if (Object.keys(state.json).length === state.count + 1) {
+                  return false;
+              }
+              return true;
+          },
+      },
       maskedArray: {
           get: function() {
               return this.masked
@@ -89,27 +125,57 @@ export default defineComponent({
           }
       }
   },
-  ionViewDidEnter() {
+  ionViewWillEnter() {
+      console.log("ionViewWillEnter");
       this.fetchQuestions().then( (questions) => {
         // storeに入れて描画
         this.generateQuestion(questions[0].question)
-        console.log(this.$store);
+        this.$store.commit("saveJson", this.shuffle(questions));
+      }).catch( (error) => {
+          console.error(error);
       });
+  },
+  ionViewWillLeave() {
+      console.log("ionViewWillLeave");
+  },
+  ionViewDidLeave() {
+      console.log("ionViewDidLeave");
+  },
+  ionViewDidEnter() {
+      console.log("ionViewDidEnter");
   },
   setup() {
   },
   methods: {
+      shuffle(base) {
+          let array = [...base];
+          for (let i = array.length; 1 < i; i--) {
+              const k = Math.floor(Math.random() * i);
+              [array[k], array[i - 1]] = [array[i - 1], array[k]];
+          }
+          return array;
+      },
+      next() {
+          this.$store.commit("increment")
+          this.masked = ""
+          this.revealCount = 0;
+          this.generateQuestion(
+            this.getItem().question
+          );
+      },
+      getItem() {
+          return this.$store.state.json[this.$store.state.count];
+      },
       async fetchQuestions() {
           const url = "https://script.google.com/macros/s/AKfycbwJG0SGHC8vZARry8LMOwVDoQ_rmYCFNLO9UmnG8yFu5NkPa2A5JpeGsAhNsF2NfWkGrQ/exec";
-          const res = await axios.get(url).then( v => v.data);
-          console.log(res);
-          return res;
+          return await axios.get(url).then( v => v.data);
       },
       generateQuestion(text) {
-        this.masked = this.mask(text);
-        this.answer = this.splitAnswer(text);
-        this.text = text;
+        this.masked = this.mask(text)
+        this.answer = this.splitAnswer(text)
+        this.text = text
         this.alphabets = this.generateAlphabets()
+        this.revealDefault()
       },
       mask(text) {
           return new Array(text.length).fill("")
@@ -131,12 +197,10 @@ export default defineComponent({
           // 選択した文字をオープンしてマスクを外す
           this.masked[index] = this.answer[index];
           // その他の場所で同じ文字があったらマスクを外す
-          const result = this.getAllIndexes(this.answer, this.answer[index]).map((index) => {
+          this.getAllIndexes(this.answer, this.answer[index]).map((index) => {
               this.masked[index] = this.answer[index];
               return true
           });
-          // TODO: resultが空だった場合該当なしを返す
-          console.log(result);
       },
       revealByChar(char) {
           this.addRevealCount();
@@ -144,8 +208,20 @@ export default defineComponent({
               this.masked[index] = this.answer[index];
               return true
           });
-          // TODO: resultが空だった場合該当なしを返す
-          console.log(result);
+          if (result.length === 0) {
+              this.message = "該当なし";
+          } else {
+              this.message = "パネルをめくります";
+          }
+      },
+      revealDefault() {
+          const ignoreChars = ["「", "」", "　", "、", "・"];
+          ignoreChars.map( c => {
+              this.getAllIndexes(this.answer, c).map((index) => {
+                this.masked[index] = this.answer[index];
+                return true
+            });
+          });
       },
       getAllIndexes(arr, val) {
         let indexes = [], i = -1;
@@ -219,4 +295,9 @@ export default defineComponent({
 #container a {
   text-decoration: none;
 }
+.message { font-size:30; text-align:center; color: #F00}
+input.message { 
+    width:100%;     padding: 0;
+    line-height: 28px;
+    height: 30px;}
 </style>

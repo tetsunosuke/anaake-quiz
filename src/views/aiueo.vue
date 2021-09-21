@@ -1,5 +1,5 @@
 <template>
-<div>
+<div class="aiueo">
 <table>
 <tr>
 <td @click="$emit('revealByChar', 'ー')">ー</td>

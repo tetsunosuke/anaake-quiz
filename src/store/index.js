@@ -1,11 +1,9 @@
-import { createStore } from "vuex";
+import { createStore } from 'vuex'
 
-export const store = createStore({
-  state() {
-    return {
-      count: 0,
-      json: {},
-    };
+export default createStore({
+  state: {
+    count: 0,
+    json: {},
   },
   mutations: {
     increment(state) {
@@ -16,4 +14,8 @@ export const store = createStore({
       state.json = value;
     },
   },
-});
+  actions: {
+  },
+  modules: {
+  }
+})
