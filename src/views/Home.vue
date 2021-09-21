@@ -11,7 +11,7 @@
   <ion-grid>
     <ion-row class="ion-align-items-center">
       <ion-col>
-        <input id="inputAnswer" class="message"/>
+        <div class="message"><input id="inputAnswer" class="message"/><button @click="checkAnswer" class="message">回答する</button></div>
       </ion-col>
     </ion-row>
     <ion-row class="ion-align-items-center">
@@ -40,13 +40,14 @@
           <li>ルール</li>
           <ul>
           <li>「？」の部分か50音表の文字をクリックすると、問題文の？の中で同じ文字がオープンします</li>
-          <li>問題文を予想して答えを出すまでにめくった回数を競います</li>
+          <li>問題文を予想して答えを出すまでにめくった回数とタイムを競います</li>
           </ul>
           <li>まだ作ってない</li>
           <ul>
           <li>トータルで回答した回数</li>
           <li>タイマー</li>
-          <li>答えの入力欄</li>
+          <li>すでに使った文字を50音から消す</li>
+          <li>「？」が何番目か表示</li>
           </ul>
         </ul>
       </ion-col>
@@ -88,6 +89,7 @@ export default defineComponent({
   data: function() {
       return {
           text: "",
+          question:"",
           answer:"",
           masked: "ただいま問題を読み込んでいます......",
           alphabets: "",
@@ -118,7 +120,7 @@ export default defineComponent({
       },
       answerArray: {
           get: function() {
-              return this.answer
+              return this.question
           },
           set: function(v) {
               this.text = v
@@ -130,6 +132,7 @@ export default defineComponent({
       this.fetchQuestions().then( (questions) => {
         // storeに入れて描画
         this.generateQuestion(questions[0].question)
+        this.generateAnswer(questions[0].answer);
         this.$store.commit("saveJson", this.shuffle(questions));
       }).catch( (error) => {
           console.error(error);
@@ -147,6 +150,12 @@ export default defineComponent({
   setup() {
   },
   methods: {
+      checkAnswer() {
+          const result = document.getElementById("inputAnswer").value === this.answer;
+          console.log(document.getElementById("inputAnswer").value)
+          console.log(this.answer);
+          console.log(result);
+      },
       shuffle(base) {
           let array = [...base];
           for (let i = array.length; 1 < i; i--) {
@@ -162,6 +171,9 @@ export default defineComponent({
           this.generateQuestion(
             this.getItem().question
           );
+          this.generateAnswer(
+            this.getItem().answer
+          );
       },
       getItem() {
           return this.$store.state.json[this.$store.state.count];
@@ -172,10 +184,13 @@ export default defineComponent({
       },
       generateQuestion(text) {
         this.masked = this.mask(text)
-        this.answer = this.splitAnswer(text)
+        this.question = this.splitAnswer(text)
         this.text = text
         this.alphabets = this.generateAlphabets()
         this.revealDefault()
+      },
+      generateAnswer(text) {
+          this.answer = text;
       },
       mask(text) {
           return new Array(text.length).fill("")
@@ -195,17 +210,17 @@ export default defineComponent({
       revealByIndex(index) {
           this.addRevealCount();
           // 選択した文字をオープンしてマスクを外す
-          this.masked[index] = this.answer[index];
+          this.masked[index] = this.question[index];
           // その他の場所で同じ文字があったらマスクを外す
-          this.getAllIndexes(this.answer, this.answer[index]).map((index) => {
-              this.masked[index] = this.answer[index];
+          this.getAllIndexes(this.question, this.question[index]).map((index) => {
+              this.masked[index] = this.question[index];
               return true
           });
       },
       revealByChar(char) {
           this.addRevealCount();
-          const result = this.getAllIndexes(this.answer, char).map((index) => {
-              this.masked[index] = this.answer[index];
+          const result = this.getAllIndexes(this.question, char).map((index) => {
+              this.masked[index] = this.question[index];
               return true
           });
           if (result.length === 0) {
@@ -217,8 +232,8 @@ export default defineComponent({
       revealDefault() {
           const ignoreChars = ["「", "」", "　", "、", "・"];
           ignoreChars.map( c => {
-              this.getAllIndexes(this.answer, c).map((index) => {
-                this.masked[index] = this.answer[index];
+              this.getAllIndexes(this.question, c).map((index) => {
+                this.masked[index] = this.question[index];
                 return true
             });
           });
@@ -295,9 +310,21 @@ export default defineComponent({
 #container a {
   text-decoration: none;
 }
-.message { font-size:30; text-align:center; color: #F00}
+
+.message { font-size:30; text-align:center;}
+div.message {
+    width:80%;
+}
 input.message { 
-    width:100%;     padding: 0;
-    line-height: 28px;
-    height: 30px;}
+    width: 20em;
+    padding: 0;
+    line-height: 40px;
+    height: 42px;
+    font-size:25px;
+}
+button.message {
+    font-size:20px;
+    line-height: 40px;
+    height: 42px;
+}
 </style>
